@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
-import ChatBar from "./CharBar.jsx";
-import Message from "./Message.jsx";
-import MessageList from "./MessageList.jsx";
+import ChatBar from './CharBar.jsx';
+import Message from './Message.jsx';
+import MessageList from './MessageList.jsx';
 import { IncomingMessage } from 'http';
 
 
@@ -9,20 +9,34 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      currentUser: { name: "Bob" }, // optional. if currentUser is not defined, it means the user is Anonymous
+      currentUser: 'Anonymous', // optional. if currentUser is not defined, it means the user is Anonymous
       messages: [
       ],
       webSocket: null
     }
     this.sendMessage = this.sendMessage.bind(this);
+    this.updateUser = this.updateUser.bind(this);
   }
   sendMessage(message) {
     const newMessage = {
       type: 'incomingMessage',
-      username: this.state.currentUser.name,
+      username: this.state.currentUser,
       content: message.content
     };
     this.state.webSocket.send(JSON.stringify(newMessage));
+  }
+
+
+
+  updateUser(input) {
+    const newNotif = {
+      type: 'incomingNotification',
+      content: `${this.state.currentUser} has changed their name to ${input}`
+    }
+    if (this.state.currentUser !== input) {
+      this.setState({ currentUser: input })
+      this.state.webSocket.send(JSON.stringify(newNotif));
+    }
   }
 
   componentDidMount() {
@@ -30,29 +44,32 @@ class App extends Component {
     webSocket.onopen = function () {
       console.log('Connected to server')
     }
-    this.setState({webSocket})
+    this.setState({ webSocket })
     webSocket.onmessage = (event) => {
-      const receiveMessage = JSON.parse(event.data)
-      const messages = this.state.messages.concat(receiveMessage) 
-      this.setState({messages: messages})
-    } 
+      const data = JSON.parse(event.data)
+      switch (data.type) {
+        case 'incomingMessage':
+          const messages = this.state.messages.concat(data);
+          this.setState({ messages: messages })
+          break;
+        case 'incomingNotification':
+          const notif = this.state.messages.concat(data);
+          this.setState({ messages: notif })
+          break;
+        default:
+          // show an error in the console if the message type is unknown
+          throw new Error('unknown event type ' + data.type)
+      }
+    };
   }
 
   render() {
     return (
       <div>
         <MessageList messages={this.state.messages}></MessageList>
-        <ChatBar currentUser={this.state.currentUser} newMessage={this.sendMessage} />
+        <ChatBar currentUser={this.state.currentUser} newMessage={this.sendMessage} updateUser={this.updateUser} />
       </div>
     );
   }
-
-  // addMessage = (message) => {
-  //   message.id = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
-  //   message.username = this.state.currentUser.name;
-  //   message.type = "incomingMessage";
-  //   const messages = this.state.messages.concat(message);
-  //   this.setState({ messages: messages });
-  // }
 }
 export default App;
