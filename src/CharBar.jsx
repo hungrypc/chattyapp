@@ -15,6 +15,7 @@ class Chatbar extends Component {
             )
         }
     }
+
     render() {
         return (
             <footer className="chatbar">
@@ -26,7 +27,7 @@ class Chatbar extends Component {
     onKeyDown = event => {
         if (event.key === "Enter") {
             const message = { content: event.target.value };
-            this.props.addMessage(message);
+            this.props.newMessage(message);
             event.target.value = "";
         }
     }
